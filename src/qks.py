@@ -47,7 +47,6 @@ class QuantumKitchenSinks():
         self.distribution = distribution
         self.n_trials = n_trials
         self.num_cols = self.n_episodes * self.q
-        #self.executable = self._build_and_compile()
 
     def fit(self, X):
         """Generate set of random parameters for X
@@ -75,7 +74,6 @@ class QuantumKitchenSinks():
         transformations = []
         for theta in self.theta:
             avg_measurements = self._qks_run(theta)
-            #print(avg_measurements)
             transformations.append(avg_measurements)
         return np.array(transformations).reshape(self.shape[0], self.num_cols)
 

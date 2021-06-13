@@ -1,8 +1,8 @@
+import os
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from qiskit import IBMQ
 from qiskit import QuantumCircuit
-
 
 import matplotlib.pyplot as plt
 
@@ -69,6 +69,12 @@ def make_plot(data, target, name, title):
     plt.savefig(name)
 
 def main():
+    plot = True
+    img_path = 'fig/'
+
+    if not os.path.exists(img_path):
+        os.mkdir(img_path)
+
     X_train, X_test, y_train, y_test = make_frames(
         train_size=200, test_size=50, outer_length=2, inner_length=1
     )
@@ -86,12 +92,7 @@ def main():
     print("Quantum Part Done")
     train_preds, test_preds = logistic_regression(QKS_train, QKS_test, y_train, y_test)
 
-    plot = True
-    img_path = 'fig/'
-
     if plot is True:
-        #print(X_train)
-        #print(y_train)
         make_plot(X_train, y_train, img_path + 'training_dataset', 'Training Set')
         make_plot(X_test, y_test, img_path + 'test_dataset', 'Test Set')
         make_plot(X_train, train_preds, img_path + 'results_experiment_train', 'Experiment Results - Training Dataset')

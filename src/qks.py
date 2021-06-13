@@ -1,9 +1,8 @@
 # Quantum Kitchen Sinks
 import qiskit
 import numpy as np
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit
 from qiskit.providers.aer import QasmSimulator
-from qiskit.visualization import plot_histogram
 simulator = QasmSimulator()
 
 
@@ -38,18 +37,17 @@ class QuantumKitchenSinks():
         quantum computers. <https://arxiv.org/pdf/1806.08321.pdf>
     """
 
-    def __init__(self, qc=None, n_episodes=1, p=None, q=None, r=1,
+    def __init__(self, n_episodes=1, p=None, q=None, r=1,
                  scale=1, distribution='normal', n_trials=1000):
-        self.qc = qc
         self.n_episodes = n_episodes
         self.p = p
-        self.q = q #r len(self.qc.qubits())
+        self.q = q
         self.r = r
         self.scale = scale
         self.distribution = distribution
         self.n_trials = n_trials
         self.num_cols = self.n_episodes * self.q
-        self.executable = self._build_and_compile()
+        #self.executable = self._build_and_compile()
 
     def fit(self, X):
         """Generate set of random parameters for X
@@ -71,6 +69,15 @@ class QuantumKitchenSinks():
 
     def transform(self):
         """Apply the QKS transformation to the random parameters"""
+        if not hasattr(self, 'theta'):
+            return None
+
+        transformations = []
+        for theta in self.theta:
+            avg_measurements = self._qks_run(theta)
+            #print(avg_measurements)
+            transformations.append(avg_measurements)
+        return np.array(transformations).reshape(self.shape[0], self.num_cols)
 
     def fit_transform(self, X):
         """Generate set of random parameters for X and apply the QKS transformation
@@ -126,73 +133,55 @@ class QuantumKitchenSinks():
 
         return np.array(thetas)
 
-    def _build_and_compile(self):
-        """ Creates the quantum circuit and compiles the program into an executable. """
+    def _build_and_compile(self, thetas):
+        """ Creates the quantum circuit and compiles the program into an executable.
+        Mimics the circuits from the appendix of the paper, with the exception of
+        the ordering of the circuit.cx gates (before and after compilation they still do not match).
+        This is probably best just left up to the compiler.
+        For ease of reading the printed operations, the qubits are looped over several times.
+        """
+        n_qubits = self.q
+        qubits = np.arange(n_qubits)
+        program = QuantumCircuit(n_qubits, n_qubits)
 
-        def _ansatz():
-            """Mimics the circuits from the appendix of the paper, with the exception of
-            the ordering of the circuit.cx gates (before and after compilation they still do not match).
-            This is probably best just left up to the compiler.
-            For ease of reading the printed operations, the qubits are looped over several times.
-            """
-            #program = qiskit.QuantumProgram()
-            #qubits = self.qc.qubits()
-            n_qubits = self.q
-            qubits = np.arange(n_qubits)
-            program = QuantumCircuit(n_qubits, n_qubits)
-            #var = 'theta'
+        sq = int(np.sqrt(n_qubits))
+        lim = n_qubits - sq - 1
 
-            #ro = program.declare('ro', memory_type='BIT', memory_size=n_qubits)
+        for m in qubits:
+            program.rx(thetas[m], m)
 
-            #thetas = {var + str(qubit): program.declare(var + str(qubit), memory_type='REAL') for qubit in qubits}
-            thetas = self._get_theta
+        for m in qubits:
+            m_1 = m + 1
+            m_sq = m + sq
+            skip = (m_1) % sq
 
-            sq = int(np.sqrt(n_qubits))
-            lim = n_qubits - sq - 1
+            if m_1 < n_qubits:
+                if (m_sq >= n_qubits):
+                    program.cx(m, m_1)
+                else:
+                    program.cx(m, m_sq)
 
-            #for m in qubits:
-            #    program.rx(thetas[var + str(m)], m)
-            for m in qubits:
-                program.rx(thetas[m], m)
+            if (m < lim) and (skip != 0): program.cx(m, m_1)
 
-            for m in qubits:
-                m_1 = m + 1
-                m_sq = m + sq
-                skip = (m_1) % sq
+        for m in qubits:
+            program.measure(m, m)
 
-                if m_1 < n_qubits:
-                    if (m_sq >= n_qubits):
-                        program.cx(m, m_1)
-                    else:
-                        program.cx(m, m_sq)
+        return program
 
-                if (m < lim) and (skip != 0): program.cx(m, m_1)
-
-            for m in qubits:
-                program.measure(m, m)
-
-            #print("program instructions from Qiskit:\n")
-            #for instruction in program.instructions:
-            #    print(instruction)
-
-            return program
-
-        program = _ansatz()
-        #program.wrap_in_numshots_loop(shots=self.n_trials)
-        #executable = self.qc.compile(program)
-        
-        executable = program #transpile(program, simulator)
-        return executable 
-
-    def _qks_run(self):
-        # Runs the QKS transformation through the quantum circuit and returns the average measurements
-        #theta_map = {'theta%s' % pos: [theta[pos]] for pos in range(len(theta))}
-        
+    def _qks_run(self, theta):
+        self.executable = self._build_and_compile(theta)
         job = simulator.run(self.executable, shots=self.n_trials)
         result = job.result()
         counts = result.get_counts(self.executable)
-        return counts
-        #bitstrings = self.qc.run(self.executable, memory_map=theta_map)
-        #avg_measurements = bitstrings.mean(axis=0)
-        #return avg_measurements
+        q_counts = [0 for _ in range(self.q)]
+
+        for key in counts:
+            for i, char in enumerate(key):
+                if char == '1':
+                    q_counts[i] += counts[key]
+        
+        q_counts = [x/self.n_trials for x in q_counts]
+            
+        return q_counts
+
 

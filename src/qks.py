@@ -101,6 +101,20 @@ class QuantumKitchenSinks():
             np.random.shuffle(m)
             selection_matrix = m.reshape(self.q, self.p)
             return selection_matrix
+        
+        def _create_selection_matrix_with_tiling():
+            """Generates a matrix of 0s and 1s to zero out `r` values per matrix"""
+            m = np.zeros((self.q, self.p))
+            a = int(np.sqrt(self.q)) #full image  sidelength (in tiles)
+            b = int(np.sqrt(self.p)) #full image  sidelength (in pixels)
+            c = int(np.ceil(b/a))    #single tile sidelength (in pixels)
+            for entry in range(self.p):
+                column = np.floor(entry/b)
+                row = entry%b
+                tilecol = int(np.floor(column/c))
+                tilerow = int(np.floor(row/c))
+                m[tilecol*a+tilerow][entry] = 1
+            return m
 
         size = (self.n_episodes, self.q, self.p)
 
@@ -110,7 +124,7 @@ class QuantumKitchenSinks():
             raise AttributeError(
                 "QKS currently only implemented for normal distributions. Use distribution = 'normal'.")
 
-        selection_matrix = np.array([_create_selection_matrix() for x in range(self.n_episodes)])
+        selection_matrix = np.array([_create_selection_matrix_with_tiling() for x in range(self.n_episodes)])
         omega = dist * selection_matrix  # matrix chooses which values to keep
 
         return omega

@@ -19,7 +19,7 @@ def logistic_regression(X_train, X_test, y_train, y_test):
     test_acc = lr.score(X_test, y_test)
 
     print(
-        "accuracy\n----- \n training: {}\n test:     {}\n"
+        "\naccuracy\n----- \n training: {}\n test:     {}\n"
           .format(train_acc, test_acc)
          )
 
@@ -97,7 +97,7 @@ def main():
         help='Number of qubits.')
     parser.add_argument('--img-dir', type=str, default='fig/', 
         help='Directory to save figures')
-    parser.add_argument('--no-plot', action='store_false', 
+    parser.add_argument('--no-plot', action='store_true', 
         help='Whether to plot the performance on the test and train datasets.')
     parser.add_argument('--tiling', action='store_true', 
         help='Whether to run QKS with tiling,')
@@ -129,15 +129,11 @@ def main():
 
     if not args.no_plot:
         print('Making plots...')
-        make_plot(X_train, y_train, args.img_dir + 
-            'training_dataset', 'Training Set')
-        make_plot(X_test, y_test, args.img_dir + 
-            'test_dataset', 'Test Set')
-        make_plot(X_train, train_preds, args.img_dir + 
-            'results_experiment_train', 'Experiment Results - Training Dataset')
-        make_plot(X_test, test_preds, args.img_dir + 
-            'results_experiment_test', 'Experiment Results - Test Dataset')
-
+        make_plot(X_train, y_train, args.img_dir + 'training_dataset', 'Training Set')
+        make_plot(X_test, y_test, args.img_dir + 'test_dataset', 'Test Set')
+        make_plot(X_train, train_preds, args.img_dir + 'results_experiment_train', 'Experiment Results - Training Dataset')
+        make_plot(X_test, test_preds, args.img_dir + 'results_experiment_test', 'Experiment Results - Test Dataset')
+    print('Done.')
 
 if __name__ == "__main__":
     np.random.seed(1337)

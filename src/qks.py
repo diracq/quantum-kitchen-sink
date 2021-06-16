@@ -117,6 +117,16 @@ class QuantumKitchenSinks():
                 m[tilecol*a+tilerow][entry] = 1
             return m
 
+        def _create_selection_matrix_with_bar_tiling():
+            """Generates a matrix of 0s and 1s to zero out `r` values per matrix"""
+            m = np.zeros((self.q, self.p))
+            b = int(np.sqrt(self.p)) #full image sidelength (in pixels)
+            width = int(np.floor(b/self.q)) #bar width (in tiles)
+            for entry in range(self.p):
+                bar_num = int(np.floor(entry/width))
+                m[bar_num][entry] = 1
+            return m
+
         size = (self.n_episodes, self.q, self.p)
 
         if self.distribution == "normal":
@@ -127,6 +137,7 @@ class QuantumKitchenSinks():
 
         if self.tiling:
             selection_matrix = np.array([_create_selection_matrix_with_tiling() for _ in range(self.n_episodes)])
+        ### NEED TO ADD CONDITION HERE FOR BAR TILING IN ARGPARSE ###
         else:
             selection_matrix = np.array([_create_selection_matrix() for _ in range(self.n_episodes)])
         omega = dist * selection_matrix  # matrix chooses which values to keep

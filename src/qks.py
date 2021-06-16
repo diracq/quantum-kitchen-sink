@@ -38,7 +38,7 @@ class QuantumKitchenSinks():
     """
 
     def __init__(self, n_episodes=1, p=None, q=None, r=1,
-                 scale=1, distribution='normal', n_trials=1000):
+                 scale=1, distribution='normal', n_trials=1000, tiling=False):
         self.n_episodes = n_episodes
         self.p = p
         self.q = q
@@ -47,6 +47,7 @@ class QuantumKitchenSinks():
         self.distribution = distribution
         self.n_trials = n_trials
         self.num_cols = self.n_episodes * self.q
+        self.tiling = tiling
 
     def fit(self, X):
         """Generate set of random parameters for X
@@ -124,7 +125,10 @@ class QuantumKitchenSinks():
             raise AttributeError(
                 "QKS currently only implemented for normal distributions. Use distribution = 'normal'.")
 
-        selection_matrix = np.array([_create_selection_matrix_with_tiling() for x in range(self.n_episodes)])
+        if self.tiling:
+            selection_matrix = np.array([_create_selection_matrix_with_tiling() for _ in range(self.n_episodes)])
+        else:
+            selection_matrix = np.array([_create_selection_matrix() for _ in range(self.n_episodes)])
         omega = dist * selection_matrix  # matrix chooses which values to keep
 
         return omega

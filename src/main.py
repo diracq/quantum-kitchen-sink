@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from qiskit import IBMQ
 from qiskit import QuantumCircuit
+import argparse
 
 import matplotlib.pyplot as plt
 
@@ -18,7 +19,7 @@ def logistic_regression(X_train, X_test, y_train, y_test):
     test_acc = lr.score(X_test, y_test)
 
     print(
-        "accuracy\n----- \n training: {}\n test:     {}"
+        "\naccuracy\n----- \n training: {}\n test:     {}\n"
           .format(train_acc, test_acc)
          )
 
@@ -28,7 +29,7 @@ def logistic_regression(X_train, X_test, y_train, y_test):
     return train_preds, test_preds
 
 
-def run_qks(p, number_of_qubits, n_episodes, scale, n_trials):
+def run_qks(p, number_of_qubits, n_episodes, scale, n_trials, tiling):
     """
     Parameters:
     p : int, default = None
@@ -58,7 +59,9 @@ def run_qks(p, number_of_qubits, n_episodes, scale, n_trials):
     QKS = QuantumKitchenSinks(n_episodes=n_episodes,
                               r=r, scale=scale,
                               distribution='normal',
-                              n_trials=n_trials, p=p, q=number_of_qubits)
+                              n_trials=n_trials, p=p, 
+                              q=number_of_qubits,
+                              tiling=tiling)
     return QKS
 
 
@@ -68,47 +71,69 @@ def make_plot(data, target, name, title):
     plt.scatter(data[:,0], data[:,1], s=5, c=target)
     plt.savefig(name)
 
+def load_IBMQ_account():
+    # Write the API token to IBM Q
+    my_api_token = 'f84c8a32633b1ce7fda84ebc53c33141d96526678b3eba6ed5709619cb2d7378a0770a72831f01ded'\
+        '4dd4a9ce691cfc5042e3c622b03129ce5376c5f000b5dcf'
+    IBMQ.save_account(my_api_token)
+
+    # Check the connection for IBM Q
+    try:
+        IBMQ.load_account()
+    except:
+        print("""WARNING: There's no connection with the API for remote backends.
+                Have you initialized a file with your personal token?
+                For now, there's only access to local simulator backends...""")
+
 def main():
-    plot = True
-    img_path = 'fig/'
+    parser = argparse.ArgumentParser(description='Quantum Kitchen Sink training script')
+    parser.add_argument('--n-episodes', type=int, default=20, 
+        help='Number of episodes to run QKS.')
+    parser.add_argument('--scale', type=int, default=1, 
+        help='Standard deviation of QKS\'s normal distribution.')
+    parser.add_argument('--n-trials', type=int, default=1000, 
+        help='Number of trials to run on each QuantumCircuit')
+    parser.add_argument('--quibits', type=int, default=4, 
+        help='Number of qubits.')
+    parser.add_argument('--img-dir', type=str, default='fig/', 
+        help='Directory to save figures')
+    parser.add_argument('--no-plot', action='store_true', 
+        help='Whether to plot the performance on the test and train datasets.')
+    parser.add_argument('--tiling', action='store_true', 
+        help='Whether to run QKS with tiling,')
+    parser.add_argument('--no-cuda', action='store_true', 
+        help='This flag should be passed when running the training script on a machine that does '
+             'not support cuda. [NOT USED YET]')
+    args = parser.parse_args()
 
-    if not os.path.exists(img_path):
-        os.mkdir(img_path)
+    print('Loading IBMQ account...')
+    load_IBMQ_account()
 
+    if not os.path.exists(args.img_dir):
+        os.mkdir(args.img_dir)
+
+    print('Initializing dataset...')
     X_train, X_test, y_train, y_test = make_frames(
         train_size=200, test_size=50, outer_length=2, inner_length=1
     )
-
-    n_episodes = 20
-    scale = 1
-    n_trials = 1000
     p = X_train.shape[-1]
-    q = 4
 
-    QKS = run_qks(p, q, n_episodes, scale, n_trials)
+    print('Running QKS...')
+    QKS = run_qks(p, args.quibits, args.n_episodes, args.scale, args.n_trials, args.tiling)
 
     QKS_train = QKS.fit_transform(X_train)
     QKS_test = QKS.fit_transform(X_test)
-    print("Quantum Part Done")
+
+    print('Running logistic regression...')
     train_preds, test_preds = logistic_regression(QKS_train, QKS_test, y_train, y_test)
 
-    if plot is True:
-        make_plot(X_train, y_train, img_path + 'training_dataset', 'Training Set')
-        make_plot(X_test, y_test, img_path + 'test_dataset', 'Test Set')
-        make_plot(X_train, train_preds, img_path + 'results_experiment_train', 'Experiment Results - Training Dataset')
-        make_plot(X_test, test_preds, img_path + 'results_experiment_test', 'Experiment Results - Test Dataset')
-
-# Write the API token to IBM Q
-my_api_token = "f84c8a32633b1ce7fda84ebc53c33141d96526678b3eba6ed5709619cb2d7378a0770a72831f01ded4dd4a9ce691cfc5042e3c622b03129ce5376c5f000b5dcf"
-IBMQ.save_account(my_api_token)
-
-# Check the connection for IBM Q
-try:
-    IBMQ.load_account()
-except:
-    print("""WARNING: There's no connection with the API for remote backends.
-             Have you initialized a file with your personal token?
-             For now, there's only access to local simulator backends...""")
+    if not args.no_plot:
+        print('Making plots...')
+        make_plot(X_train, y_train, args.img_dir + 'training_dataset', 'Training Set')
+        make_plot(X_test, y_test, args.img_dir + 'test_dataset', 'Test Set')
+        make_plot(X_train, train_preds, args.img_dir + 'results_experiment_train', 'Experiment Results - Training Dataset')
+        make_plot(X_test, test_preds, args.img_dir + 'results_experiment_test', 'Experiment Results - Test Dataset')
+    print('Done.')
 
 if __name__ == "__main__":
     np.random.seed(1337)

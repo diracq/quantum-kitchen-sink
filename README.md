@@ -16,7 +16,7 @@ pipenv -h
 
 # Training
 When running the project for the first time, it is necessary to install dependencies. Run the 
-following commands from the root director to properly set up your environment and run the training
+following commands from the root directory to properly set up your environment and run the training
 script.
 ```
 pipenv install

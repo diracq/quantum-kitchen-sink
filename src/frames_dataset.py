@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +6,16 @@ from torch.utils.data import Dataset, DataLoader
 
 from .dataset_interface import QKSDatasetInterface
 from .qks import QuantumKitchenSinks
-from .config import QKSConfig
+
+
+def get_frames_dataloaders(QKS: QuantumKitchenSinks, batch_size=32):
+    train = QKSFramesDataset(QKS, is_train=True)
+    test = QKSFramesDataset(QKS, is_train=False)
+
+    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader, train, test, 1
 
 
 class QKSFramesDataset(QKSDatasetInterface):
@@ -40,13 +48,12 @@ class QKSFramesDataset(QKSDatasetInterface):
     def _get_classical_dataset_labels(self) -> np.array:
         return self.classical_dataset.y
 
-    def _get_classical_dataloader(self, is_train: bool) -> DataLoader:
+    def _get_classical_dataset(self, is_train: bool) -> Dataset:
         if is_train:
             self.classical_dataset = FramesDataset(200, 2, 1)
         else:
             self.classical_dataset = FramesDataset(50, 2, 1)
-        data_loader = DataLoader(self.classical_dataset, batch_size=1, shuffle=False)
-        return data_loader
+        return self.classical_dataset
 
 class FramesDataset(Dataset):
     """ Generates pictures frames dataset. """

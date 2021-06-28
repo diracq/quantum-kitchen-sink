@@ -1,8 +1,10 @@
-from .config import QKSConfig
 import numpy as np
-from torch.utils.data import DataLoader
+from tqdm import tqdm
+from torch.utils.data.dataset import Dataset
+from .config import QKSConfig
 from qiskit import QuantumCircuit
 from qiskit.providers.aer import QasmSimulator
+from qiskit import Aer
 from typing import Callable, List
 
 simulator = QasmSimulator()
@@ -34,7 +36,7 @@ class QuantumKitchenSinks():
         self.tiling = config.tiling
         
 
-    def qks_preprocess(self, X: DataLoader, vectorize_input: Callable, input_dim):
+    def qks_preprocess(self, X: Dataset, vectorize_input: Callable, input_dim):
         """Generate set of random parameters for X and apply the QKS transformation
 
         param X : Dataset sized (n_samples, input_dim) after vectorization Training data
@@ -53,7 +55,7 @@ class QuantumKitchenSinks():
     def _transform(self, thetas, n_samples):
         """Apply the QKS transformation to the random parameters"""
         transformations = []
-        for theta in thetas:
+        for theta in tqdm(thetas):
             avg_measurements = self._run_simulator(theta)
             transformations.append(avg_measurements)
         return np.array(transformations).reshape(n_samples, self.num_cols)
@@ -116,7 +118,7 @@ class QuantumKitchenSinks():
         """random q-dimensional bias vector"""
         return np.random.uniform(low=0, high=(2 * np.pi), size=(self.n_episodes, self.qubits))
 
-    def _get_theta(self, X: DataLoader, vectorize_input: Callable) -> List[float]:
+    def _get_theta(self, X: Dataset, vectorize_input: Callable) -> List[float]:
         """
         A linear transformation to get our set of random parameters to feed into the quantum circuit
 
